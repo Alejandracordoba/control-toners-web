@@ -79,22 +79,52 @@ async function cargarHistorial() {
     tablaHistorial.innerHTML = '';
 
     if (!historial) {
-        tablaHistorial.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No hay registros cargados.</td></tr>`;
+        tablaHistorial.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay registros cargados.</td></tr>`;
         return;
     }
 
     Object.keys(historial).reverse().forEach(id => {
         const r = historial[id];
         let tr = document.createElement('tr');
+        // Agregamos la celda final con el botón de borrar que pasa el ID y los datos necesarios
         tr.innerHTML = `
             <td class="text-muted small">${r.fecha}</td>
             <td class="fw-semibold">${r.area}</td>
             <td>${r.base}</td>
             <td><span class="badge bg-secondary text-white">${r.codigo}</span></td>
             <td><span class="badge bg-light text-dark border">${r.remanente} u.</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="eliminarRegistro('${id}', '${r.codigo}')">
+                    🗑️ Borrar
+                </button>
+            </td>
         `;
         tablaHistorial.appendChild(tr);
     });
+}
+
+// Nueva función global para eliminar el registro erróneo y devolver el stock
+window.eliminarRegistro = async function(id, codigoToner) {
+    if (confirm("¿Estás segura de que querés borrar este registro? Se devolverá 1 unidad al stock.")) {
+        try {
+            // 1. Borrar de la tabla historial en Firebase
+            await fetch(`${FIREBASE_URL}historial.json/${id}.json`, { method: 'DELETE' });
+
+            // 2. Devolver la unidad al stock local y actualizar Firebase
+            if (stockLocal[codigoToner] !== undefined) {
+                let nuevaCant = stockLocal[codigoToner] + 1;
+                let up = {}; up[codigoToner] = nuevaCant;
+                await fetch(`${FIREBASE_URL}stock.json`, { method: 'PATCH', body: JSON.stringify(up) });
+            }
+
+            // 3. Recargar la interfaz de usuario
+            await cargarStock();
+            await cargarHistorial();
+        } catch (e) {
+            console.error("Error al eliminar:", e);
+            alert("No se pudo eliminar el registro.");
+        }
+    }
 }
 
 // Botón: Registrar Cambio (Descontar 1 unidad)
