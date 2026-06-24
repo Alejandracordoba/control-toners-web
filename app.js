@@ -107,8 +107,8 @@ async function cargarHistorial() {
 window.eliminarRegistro = async function(id, codigoToner) {
     if (confirm("¿Estás segura de que querés borrar este registro? Se devolverá 1 unidad al stock.")) {
         try {
-            // 1. Borrar de la tabla historial en Firebase
-            await fetch(`${FIREBASE_URL}historial.json/${id}.json`, { method: 'DELETE' });
+            // 1. BORRADO CORREGIDO: Apunta exacto al nodo del registro en Firebase
+            await fetch(`${FIREBASE_URL}historial/${id}.json`, { method: 'DELETE' });
 
             // 2. Devolver la unidad al stock local y actualizar Firebase
             if (stockLocal[codigoToner] !== undefined) {
@@ -117,9 +117,10 @@ window.eliminarRegistro = async function(id, codigoToner) {
                 await fetch(`${FIREBASE_URL}stock.json`, { method: 'PATCH', body: JSON.stringify(up) });
             }
 
-            // 3. Recargar la interfaz de usuario
+            // 3. Recargar la interfaz de usuario con los datos limpios
             await cargarStock();
             await cargarHistorial();
+            
         } catch (e) {
             console.error("Error al eliminar:", e);
             alert("No se pudo eliminar el registro.");
